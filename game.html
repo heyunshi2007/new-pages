@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>森林冰火人</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  font-family: 'Segoe UI', sans-serif;
+  overflow: hidden;
+}
+#gameContainer {
+  position: relative;
+  border: 3px solid #2a2a4a;
+  border-radius: 8px;
+  box-shadow: 0 0 40px rgba(0,0,0,0.8), 0 0 80px rgba(50,50,100,0.3);
+}
+canvas { display: block; border-radius: 5px; }
+#ui-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+#startScreen, #levelComplete, #gameOver {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0,0,0,0.85);
+  z-index: 20;
+  pointer-events: auto;
+}
+#startScreen h1 {
+  font-size: 48px;
+  background: linear-gradient(135deg, #ff6b35, #00b4d8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 20px;
+  text-shadow: none;
+}
+#startScreen .subtitle {
+  color: #aaa;
+  font-size: 16px;
+  margin-bottom: 40px;
+}
+.btn {
+  padding: 15px 50px;
+  font-size: 20px;
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  margin: 8px;
+  transition: all 0.3s;
+  font-weight: bold;
+  pointer-events: auto;
+}
+.btn-start {
+  background: linear-gradient(135deg, #ff6b35, #e63946);
+  color: white;
+}
+.btn-start:hover { transform: scale(1.1); box-shadow: 0 0 30px rgba(255,107,53,0.5); }
+.controls-info {
+  margin-top: 30px;
+  display: flex;
+  gap: 60px;
+  color: #ccc;
+  font-size: 14px;
+}
+.controls-info div { text-align: center; }
+.controls-info h3 { margin-bottom: 8px; font-size: 18px; }
+.fire-text { color: #ff6b35; }
+.water-text { color: #00b4d8; }
+.key {
+  display: inline-block;
+  background: #333;
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 2px 8px;
+  margin: 2px;
+  font-family: monospace;
+  font-size: 13px;
+  min-width: 28px;
+  text-align: center;
+}
+#levelComplete h2, #gameOver h2 {
+  font-size: 42px;
+  margin-bottom: 15px;
+}
+#levelComplete h2 { color: #4ecdc4; }
+#gameOver h2 { color: #e63946; }
+#levelComplete .stats, #gameOver .stats {
+  color: #aaa;
+  font-size: 18px;
+  margin-bottom: 30px;
+}
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div id="gameContainer">
+  <canvas id="gameCanvas" width="960" height="640"></canvas>
+  <div id="ui-overlay"></div>
+  <div id="startScreen">
+    <h1>🔥 森林冰火人 💧</h1>
+    <div class="subtitle">双人合作平台冒险</div>
+    <button class="btn btn-start" onclick="startGame()">开始游戏</button>
+    <div class="controls-info">
+      <div>
+        <h3 class="fire-text">🔥 火男孩</h3>
+        <div><span class="key">↑</span> 跳跃</div>
+        <div><span class="key">←</span> <span class="key">→</span> 移动</div>
+        <div style="margin-top:5px;color:#888;">可穿越火焰 🔥</div>
+        <div style="color:#e63946;">遇水死亡 💧</div>
+      </div>
+      <div>
+        <h3 class="water-text">💧 水女孩</h3>
+        <div><span class="key">W</span> 跳跃</div>
+        <div><span class="key">A</span> <span class="key">D</span> 移动</div>
+        <div style="margin-top:5px;color:#888;">可穿越水池 💧</div>
+        <div style="color:#e63946;">遇火死亡 🔥</div>
+      </div>
+    </div>
+    <div style="margin-top:20px;color:#666;font-size:13px;">⚠️ 绿色毒液对两者都致命！</div>
+  </div>
+  <div id="levelComplete" class="hidden">
+    <h2>🎉 关卡通过！</h2>
+    <div class="stats" id="levelStats"></div>
+    <button class="btn btn-start" onclick="nextLevel()">下一关</button>
+  </div>
+  <div id="gameOver" class="hidden">
+    <h2>💀 游戏结束</h2>
+    <div class="stats" id="deathStats"></div>
+    <button class="btn btn-start" onclick="restartLevel()">重新开始</button>
+  </div>
+</div>
+
+<script>
+// roundRect polyfill
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+    if (typeof r === 'number') r = [r,r,r,r];
+    this.moveTo(x + r[0], y);
+    this.lineTo(x + w - r[1], y);
+    this.quadraticCurveTo(x + w, y, x + w, y + r[1]);
+    this.lineTo(x + w, y + h - r[2]);
+    this.quadraticCurveTo(x + w, y + h, x + w - r[2], y + h);
+    this.lineTo(x + r[3], y + h);
+    this.quadraticCurveTo(x, y + h, x, y + h - r[3]);
+    this.lineTo(x, y + r[0]);
+    this.quadraticCurveTo(x, y, x + r[0], y);
+    this.closePath();
+  };
+}
+
+// ============ GAME ENGINE ============
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+// Game state
+let gameState = 'menu'; // menu, playing, levelComplete, gameOver
+let currentLevel = 0;
+let gems = [];
+let particles = [];
+let platforms = [];
+let hazards = [];
+let exits = [];
+let doors = [];
+let movingPlatforms = [];
+let levers = [];
+let timer = 0;
+let fireGems = 0, waterGems = 0;
+let totalFireGems = 0, totalWaterGems = 0;
+let bgStars = [];
+let bgTrees = [];
+
+// Generate background elements
+for (let i = 0; i < 60; i++) {
+  bgStars.push({ x: Math.random()*W, y: Math.random()*H*0.6, s: Math.random()*2+0.5, b: Math.random() });
+}
+for (let i = 0; i < 12; i++) {
+  bgTrees.push({ x: i*85+Math.random()*40, h: 80+Math.random()*120, w: 20+Math.random()*15 });
+}
+
+// ============ INPUT ============
+const keys = {};
+window.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
+});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+// ============ PLAYER CLASS ============
+class Player {
+  constructor(x, y, type) {
+    this.startX = x; this.startY = y;
+    this.x = x; this.y = y;
+    this.w = 24; this.h = 36;
+    this.vx = 0; this.vy = 0;
+    this.type = type; // 'fire' or 'water'
+    this.onGround = false;
+    this.alive = true;
+    this.atExit = false;
+    this.facing = 1;
+    this.animFrame = 0;
+    this.animTimer = 0;
+    this.jumpCount = 0;
+    this.maxJumps = 2;
+    this.trailTimer = 0;
+  }
+
+  reset() {
+    this.x = this.startX; this.y = this.startY;
+    this.vx = 0; this.vy = 0;
+    this.onGround = false;
+    this.alive = true;
+    this.atExit = false;
+    this.jumpCount = 0;
+  }
+
+  update(dt) {
+    if (!this.alive) return;
+
+    const speed = 4.5;
+    const gravity = 0.55;
+    const jumpForce = -11;
+    const friction = 0.82;
+
+    // Input
+    if (this.type === 'fire') {
+      if (keys['ArrowLeft']) { this.vx = -speed; this.facing = -1; }
+      else if (keys['ArrowRight']) { this.vx = speed; this.facing = 1; }
+      else this.vx *= friction;
+      if (keys['ArrowUp'] && this.jumpCount < this.maxJumps) {
+        this.vy = jumpForce;
+        this.jumpCount++;
+        keys['ArrowUp'] = false;
+        spawnJumpParticles(this);
+      }
+    } else {
+      if (keys['KeyA']) { this.vx = -speed; this.facing = -1; }
+      else if (keys['KeyD']) { this.vx = speed; this.facing = 1; }
+      else this.vx *= friction;
+      if (keys['KeyW'] && this.jumpCount < this.maxJumps) {
+        this.vy = jumpForce;
+        this.jumpCount++;
+        keys['KeyW'] = false;
+        spawnJumpParticles(this);
+      }
+    }
+
+    // Physics
+    this.vy += gravity;
+    if (this.vy > 14) this.vy = 14;
+
+    // Move X
+    this.x += this.vx;
+    this.resolveCollisionX();
+
+    // Move Y
+    this.y += this.vy;
+    this.onGround = false;
+    this.resolveCollisionY();
+
+    // Moving platforms
+    for (let mp of movingPlatforms) {
+      if (this.onGround && this.overlaps(mp) && this.y + this.h >= mp.y - 2 && this.y + this.h <= mp.y + 6) {
+        this.x += mp.vx;
+        this.y += mp.vy;
+      }
+    }
+
+    // Boundaries
+    if (this.x < 0) this.x = 0;
+    if (this.x + this.w > W) this.x = W - this.w;
+    if (this.y > H + 50) this.die();
+
+    // Animation
+    if (Math.abs(this.vx) > 0.5) {
+      this.animTimer += dt;
+      if (this.animTimer > 100) { this.animFrame = (this.animFrame+1)%4; this.animTimer = 0; }
+    } else {
+      this.animFrame = 0;
+    }
+
+    // Trail particles
+    this.trailTimer += dt;
+    if (this.trailTimer > 50 && (Math.abs(this.vx) > 1 || Math.abs(this.vy) > 1)) {
+      this.trailTimer = 0;
+      spawnTrailParticle(this);
+    }
+
+    // Hazard check
+    this.checkHazards();
+
+    // Gem collection
+    this.checkGems();
+
+    // Exit check
+    this.checkExit();
+  }
+
+  overlaps(rect) {
+    return this.x < rect.x + rect.w && this.x + this.w > rect.x &&
+           this.y < rect.y + rect.h && this.y + this.h > rect.y;
+  }
+
+  resolveCollisionX() {
+    for (let p of platforms) {
+      if (this.overlaps(p)) {
+        if (this.vx > 0) this.x = p.x - this.w;
+        else if (this.vx < 0) this.x = p.x + p.w;
+        this.vx = 0;
+      }
+    }
+  }
+
+  resolveCollisionY() {
+    for (let p of platforms) {
+      if (this.overlaps(p)) {
+        if (this.vy > 0) {
+          this.y = p.y - this.h;
+          this.onGround = true;
+          this.jumpCount = 0;
+        } else if (this.vy < 0) {
+          this.y = p.y + p.h;
+        }
+        this.vy = 0;
+      }
+    }
+  }
+
+  checkHazards() {
+    for (let h of hazards) {
+      if (this.overlaps(h)) {
+        if (h.type === 'poison') { this.die(); return; }
+        if (h.type === 'fire' && this.type === 'water') { this.die(); return; }
+        if (h.type === 'water' && this.type === 'fire') { this.die(); return; }
+      }
+    }
+  }
+
+  checkGems() {
+    for (let i = gems.length-1; i >= 0; i--) {
+      let g = gems[i];
+      if (!g.collected && this.overlaps(g)) {
+        if (g.type === 'fire' && this.type === 'fire') {
+          g.collected = true; fireGems++;
+          spawnGemParticles(g, '#ff6b35');
+        } else if (g.type === 'water' && this.type === 'water') {
+          g.collected = true; waterGems++;
+          spawnGemParticles(g, '#00b4d8');
+        }
+      }
+    }
+  }
+
+  checkExit() {
+    this.atExit = false;
+    for (let e of exits) {
+      if (this.overlaps(e)) {
+        if (e.type === this.type) { this.atExit = true; return; }
+      }
+    }
+  }
+
+  die() {
+    if (!this.alive) return;
+    this.alive = false;
+    spawnDeathParticles(this);
+    setTimeout(() => showGameOver(), 800);
+  }
+
+  draw() {
+    if (!this.alive) return;
+    const cx = this.x + this.w/2;
+    const cy = this.y + this.h/2;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    if (this.facing < 0) ctx.scale(-1, 1);
+
+    // Glow
+    const glowColor = this.type === 'fire' ? 'rgba(255,107,53,0.3)' : 'rgba(0,180,216,0.3)';
+    ctx.shadowColor = this.type === 'fire' ? '#ff6b35' : '#00b4d8';
+    ctx.shadowBlur = 15;
+
+    // Body
+    const bodyColor = this.type === 'fire' ? '#ff6b35' : '#00b4d8';
+    const bodyColor2 = this.type === 'fire' ? '#e63946' : '#0077b6';
+
+    // Legs animation
+    const legOffset = Math.sin(this.animFrame * Math.PI/2) * 4;
+
+    // Left leg
+    ctx.fillStyle = bodyColor2;
+    ctx.fillRect(-8, 10, 6, 14 + (this.onGround ? legOffset : 0));
+    // Right leg
+    ctx.fillRect(2, 10, 6, 14 + (this.onGround ? -legOffset : 0));
+
+    // Body
+    ctx.fillStyle = bodyColor;
+    ctx.beginPath();
+    ctx.roundRect(-10, -8, 20, 22, 4);
+    ctx.fill();
+
+    // Head
+    ctx.fillStyle = bodyColor;
+    ctx.beginPath();
+    ctx.arc(0, -14, 10, 0, Math.PI*2);
+    ctx.fill();
+
+    // Eyes
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'white';
+    ctx.beginPath();
+    ctx.arc(3, -15, 3.5, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = '#222';
+    ctx.beginPath();
+    ctx.arc(4, -15, 2, 0, Math.PI*2);
+    ctx.fill();
+
+    // Element on head
+    if (this.type === 'fire') {
+      // Flame
+      ctx.fillStyle = '#ffba08';
+      ctx.beginPath();
+      ctx.moveTo(-4, -24);
+      ctx.quadraticCurveTo(0, -34, 4, -24);
+      ctx.fill();
+      ctx.fillStyle = '#ff6b35';
+      ctx.beginPath();
+      ctx.moveTo(-2, -24);
+      ctx.quadraticCurveTo(0, -30, 2, -24);
+      ctx.fill();
+    } else {
+      // Water drop
+      ctx.fillStyle = '#90e0ef';
+      ctx.beginPath();
+      ctx.moveTo(0, -30);
+      ctx.quadraticCurveTo(6, -22, 0, -18);
+      ctx.quadraticCurveTo(-6, -22, 0, -30);
+      ctx.fill();
+    }
+
+    // Arms
+    ctx.fillStyle = bodyColor;
+    const armSwing = Math.sin(this.animFrame * Math.PI/2) * 8;
+    ctx.save();
+    ctx.translate(-10, -2);
+    ctx.rotate((this.onGround ? armSwing : -20) * Math.PI/180);
+    ctx.fillRect(-3, 0, 5, 14);
+    ctx.restore();
+    ctx.save();
+    ctx.translate(10, -2);
+    ctx.rotate((this.onGround ? -armSwing : 20) * Math.PI/180);
+    ctx.fillRect(-2, 0, 5, 14);
+    ctx.restore();
+
+    ctx.restore();
+  }
+}
+
+// ============ PARTICLES ============
+function spawnJumpParticles(player) {
+  for (let i = 0; i < 8; i++) {
+    particles.push({
+      x: player.x + player.w/2 + (Math.random()-0.5)*20,
+      y: player.y + player.h,
+      vx: (Math.random()-0.5)*3,
+      vy: Math.random()*2 + 1,
+      life: 1,
+      decay: 0.03 + Math.random()*0.02,
+      size: 2 + Math.random()*3,
+      color: player.type === 'fire' ? `hsl(${20+Math.random()*20},100%,${50+Math.random()*30}%)` : `hsl(${190+Math.random()*20},100%,${50+Math.random()*30}%)`
+    });
+  }
+}
+
+function spawnTrailParticle(player) {
+  particles.push({
+    x: player.x + player.w/2 + (Math.random()-0.5)*8,
+    y: player.y + player.h - 5 + Math.random()*10,
+    vx: (Math.random()-0.5)*0.5,
+    vy: -Math.random()*1.5,
+    life: 1,
+    decay: 0.04,
+    size: 1.5 + Math.random()*2,
+    color: player.type === 'fire' ? `hsla(${20+Math.random()*30},100%,60%,0.7)` : `hsla(${190+Math.random()*30},100%,60%,0.7)`
+  });
+}
+
+function spawnGemParticles(gem, color) {
+  for (let i = 0; i < 12; i++) {
+    const angle = (Math.PI*2/12)*i;
+    particles.push({
+      x: gem.x + gem.w/2,
+      y: gem.y + gem.h/2,
+      vx: Math.cos(angle)*3,
+      vy: Math.sin(angle)*3,
+      life: 1,
+      decay: 0.025,
+      size: 2 + Math.random()*3,
+      color: color
+    });
+  }
+}
+
+function spawnDeathParticles(player) {
+  for (let i = 0; i < 30; i++) {
+    const angle = Math.random()*Math.PI*2;
+    const speed = 1 + Math.random()*5;
+    particles.push({
+      x: player.x + player.w/2,
+      y: player.y + player.h/2,
+      vx: Math.cos(angle)*speed,
+      vy: Math.sin(angle)*speed - 2,
+      life: 1,
+      decay: 0.015,
+      size: 3 + Math.random()*5,
+      color: player.type === 'fire' ? `hsl(${Math.random()*40},100%,${40+Math.random()*40}%)` : `hsl(${180+Math.random()*40},100%,${40+Math.random()*40}%)`
+    });
+  }
+}
+
+function updateParticles() {
+  for (let i = particles.length-1; i >= 0; i--) {
+    let p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.05;
+    p.life -= p.decay;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+
+function drawParticles() {
+  for (let p of particles) {
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ============ LEVELS ============
+const levels = [
+  // Level 1 - Tutorial
+  {
+    name: "初次相遇",
+    fireStart: [60, 520],
+    waterStart: [120, 520],
+    platforms: [
+      // Floor
+      {x:0, y:580, w:400, h:60, type:'stone'},
+      {x:560, y:580, w:400, h:60, type:'stone'},
+      // Gap with water
+      {x:400, y:610, w:160, h:30, type:'hazard', hazardType:'water'},
+      // Platforms going up
+      {x:200, y:480, w:120, h:16, type:'stone'},
+      {x:400, y:420, w:120, h:16, type:'stone'},
+      {x:150, y:360, w:120, h:16, type:'stone'},
+      {x:350, y:300, w:120, h:16, type:'stone'},
+      {x:550, y:360, w:120, h:16, type:'stone'},
+      {x:700, y:300, w:120, h:16, type:'stone'},
+      // Upper area
+      {x:500, y:220, w:200, h:16, type:'stone'},
+      {x:250, y:180, w:150, h:16, type:'stone'},
+      // Top
+      {x:50, y:120, w:200, h:16, type:'stone'},
+      {x:700, y:120, w:200, h:16, type:'stone'},
+      // Walls
+      {x:0, y:0, w:20, h:640, type:'stone'},
+      {x:940, y:0, w:20, h:640, type:'stone'},
+      {x:0, y:0, w:960, h:20, type:'stone'},
+    ],
+    hazards: [
+      {x:400, y:610, w:160, h:30, type:'water'},
+      {x:300, y:580, w:80, h:20, type:'fire'},
+    ],
+    gems: [
+      {x:230, y:455, w:14, h:14, type:'fire'},
+      {x:430, y:395, w:14, h:14, type:'water'},
+      {x:180, y:335, w:14, h:14, type:'fire'},
+      {x:380, y:275, w:14, h:14, type:'water'},
+      {x:580, y:335, w:14, h:14, type:'fire'},
+      {x:730, y:275, w:14, h:14, type:'water'},
+      {x:550, y:195, w:14, h:14, type:'fire'},
+      {x:300, y:155, w:14, h:14, type:'water'},
+    ],
+    exits: [
+      {x:80, y:80, w:30, h:40, type:'fire'},
+      {x:850, y:80, w:30, h:40, type:'water'},
+    ],
+    movingPlatforms: [],
+  },
+  // Level 2 - Poison introduction
+  {
+    name: "毒液危机",
+    fireStart: [60, 520],
+    waterStart: [120, 520],
+    platforms: [
+      // Floor sections
+      {x:0, y:580, w:250, h:60, type:'stone'},
+      {x:350, y:580, w:260, h:60, type:'stone'},
+      {x:710, y:580, w:250, h:60, type:'stone'},
+      // Poison pools
+      {x:250, y:600, w:100, h:40, type:'hazard', hazardType:'poison'},
+      {x:610, y:600, w:100, h:40, type:'hazard', hazardType:'poison'},
+      // Fire pool (right side floor)
+      {x:760, y:580, w:80, h:20, type:'hazard', hazardType:'fire'},
+      // Water pool (left side floor)
+      {x:60, y:580, w:80, h:20, type:'hazard', hazardType:'water'},
+      // Climbing platforms
+      {x:100, y:470, w:100, h:16, type:'stone'},
+      {x:300, y:430, w:100, h:16, type:'stone'},
+      {x:500, y:470, w:100, h:16, type:'stone'},
+      {x:700, y:430, w:100, h:16, type:'stone'},
+      {x:850, y:370, w:80, h:16, type:'stone'},
+      // Middle section
+      {x:400, y:340, w:160, h:16, type:'stone'},
+      {x:200, y:280, w:120, h:16, type:'stone'},
+      {x:600, y:280, w:120, h:16, type:'stone'},
+      // Top
+      {x:350, y:200, w:260, h:16, type:'stone'},
+      {x:100, y:140, w:150, h:16, type:'stone'},
+      {x:700, y:140, w:150, h:16, type:'stone'},
+      // Walls
+      {x:0, y:0, w:20, h:640, type:'stone'},
+      {x:940, y:0, w:20, h:640, type:'stone'},
+      {x:0, y:0, w:960, h:20, type:'stone'},
+    ],
+    hazards: [
+      {x:250, y:600, w:100, h:40, type:'poison'},
+      {x:610, y:600, w:100, h:40, type:'poison'},
+      {x:760, y:580, w:80, h:20, type:'fire'},
+      {x:60, y:580, w:80, h:20, type:'water'},
+      {x:430, y:340, w:60, h:16, type:'poison'},
+    ],
+    gems: [
+      {x:130, y:445, w:14, h:14, type:'fire'},
+      {x:330, y:405, w:14, h:14, type:'water'},
+      {x:530, y:445, w:14, h:14, type:'fire'},
+      {x:730, y:405, w:14, h:14, type:'water'},
+      {x:450, y:315, w:14, h:14, type:'fire'},
+      {x:250, y:255, w:14, h:14, type:'water'},
+      {x:650, y:255, w:14, h:14, type:'fire'},
+      {x:420, y:175, w:14, h:14, type:'water'},
+    ],
+    exits: [
+      {x:130, y:100, w:30, h:40, type:'fire'},
+      {x:790, y:100, w:30, h:40, type:'water'},
+    ],
+    movingPlatforms: [],
+  },
+  // Level 3 - Moving platforms
+  {
+    name: "机关迷阵",
+    fireStart: [60, 520],
+    waterStart: [120, 520],
+    platforms: [
+      // Floor
+      {x:0, y:580, w:300, h:60, type:'stone'},
+      {x:660, y:580, w:300, h:60, type:'stone'},
+      {x:300, y:610, w:360, h:30, type:'hazard', hazardType:'poison'},
+      // Left side
+      {x:50, y:460, w:120, h:16, type:'stone'},
+      {x:200, y:380, w:100, h:16, type:'stone'},
+      {x:50, y:300, w:120, h:16, type:'stone'},
+      // Right side
+      {x:790, y:460, w:120, h:16, type:'stone'},
+      {x:660, y:380, w:100, h:16, type:'stone'},
+      {x:790, y:300, w:120, h:16, type:'stone'},
+      // Middle bridge
+      {x:350, y:350, w:260, h:16, type:'stone'},
+      // Top section
+      {x:200, y:220, w:100, h:16, type:'stone'},
+      {x:400, y:180, w:160, h:16, type:'stone'},
+      {x:660, y:220, w:100, h:16, type:'stone'},
+      // Very top
+      {x:100, y:130, w:160, h:16, type:'stone'},
+      {x:700, y:130, w:160, h:16, type:'stone'},
+      {x:380, y:80, w:200, h:16, type:'stone'},
+      // Walls
+      {x:0, y:0, w:20, h:640, type:'stone'},
+      {x:940, y:0, w:20, h:640, type:'stone'},
+      {x:0, y:0, w:960, h:20, type:'stone'},
+    ],
+    hazards: [
+      {x:300, y:610, w:360, h:30, type:'poison'},
+      {x:100, y:580, w:60, h:20, type:'fire'},
+      {x:800, y:580, w:60, h:20, type:'water'},
+      {x:420, y:350, w:80, h:16, type:'poison'},
+    ],
+    gems: [
+      {x:80, y:435, w:14, h:14, type:'fire'},
+      {x:230, y:355, w:14, h:14, type:'water'},
+      {x:820, y:435, w:14, h:14, type:'fire'},
+      {x:690, y:355, w:14, h:14, type:'water'},
+      {x:230, y:195, w:14, h:14, type:'fire'},
+      {x:450, y:155, w:14, h:14, type:'water'},
+      {x:700, y:195, w:14, h:14, type:'fire'},
+      {x:450, y:55, w:14, h:14, type:'water'},
+    ],
+    exits: [
+      {x:120, y:90, w:30, h:40, type:'fire'},
+      {x:810, y:90, w:30, h:40, type:'water'},
+    ],
+    movingPlatforms: [
+      {x:350, y:480, w:80, h:14, vx:0, vy:1, minY:440, maxY:520, dir:1},
+      {x:530, y:480, w:80, h:14, vx:0, vy:1, minY:440, maxY:520, dir:-1},
+      {x:380, y:260, w:80, h:14, vx:1.5, vy:0, minX:300, maxX:580, dir:1},
+    ],
+  },
+  // Level 4 - The Temple
+  {
+    name: "神殿试炼",
+    fireStart: [60, 100],
+    waterStart: [870, 100],
+    platforms: [
+      // Top platforms
+      {x:20, y:120, w:150, h:16, type:'stone'},
+      {x:790, y:120, w:150, h:16, type:'stone'},
+      // Descending left
+      {x:50, y:220, w:120, h:16, type:'stone'},
+      {x:180, y:310, w:120, h:16, type:'stone'},
+      {x:50, y:400, w:120, h:16, type:'stone'},
+      // Descending right
+      {x:790, y:220, w:120, h:16, type:'stone'},
+      {x:660, y:310, w:120, h:16, type:'stone'},
+      {x:790, y:400, w:120, h:16, type:'stone'},
+      // Center
+      {x:350, y:250, w:260, h:16, type:'stone'},
+      {x:300, y:370, w:360, h:16, type:'stone'},
+      // Bottom area
+      {x:0, y:500, w:200, h:16, type:'stone'},
+      {x:250, y:500, w:100, h:16, type:'stone'},
+      {x:610, y:500, w:100, h:16, type:'stone'},
+      {x:760, y:500, w:200, h:16, type:'stone'},
+      // Bottom floor
+      {x:0, y:580, w:960, h:60, type:'stone'},
+      // Exits area
+      {x:400, y:460, w:160, h:16, type:'stone'},
+      // Walls
+      {x:0, y:0, w:20, h:640, type:'stone'},
+      {x:940, y:0, w:20, h:640, type:'stone'},
+      {x:0, y:0, w:960, h:20, type:'stone'},
+    ],
+    hazards: [
+      {x:200, y:580, w:50, h:20, type:'fire'},
+      {x:710, y:580, w:50, h:20, type:'water'},
+      {x:350, y:580, w:260, h:20, type:'poison'},
+      {x:430, y:250, w:100, h:16, type:'poison'},
+      {x:400, y:370, w:160, h:16, type:'poison'},
+    ],
+    gems: [
+      {x:80, y:195, w:14, h:14, type:'fire'},
+      {x:830, y:195, w:14, h:14, type:'water'},
+      {x:210, y:285, w:14, h:14, type:'fire'},
+      {x:700, y:285, w:14, h:14, type:'water'},
+      {x:80, y:375, w:14, h:14, type:'fire'},
+      {x:830, y:375, w:14, h:14, type:'water'},
+      {x:450, y:435, w:14, h:14, type:'fire'},
+      {x:480, y:435, w:14, h:14, type:'water'},
+    ],
+    exits: [
+      {x:440, y:420, w:30, h:40, type:'fire'},
+      {x:490, y:420, w:30, h:40, type:'water'},
+    ],
+    movingPlatforms: [
+      {x:200, y:160, w:80, h:14, vx:1, vy:0, minX:170, maxX:680, dir:1},
+      {x:200, y:450, w:80, h:14, vx:1, vy:0, minX:200, maxX:600, dir:1},
+    ],
+  },
+  // Level 5 - Final Challenge
+  {
+    name: "最终挑战",
+    fireStart: [60, 520],
+    waterStart: [870, 520],
+    platforms: [
+      // Bottom floor split
+      {x:0, y:580, w:180, h:60, type:'stone'},
+      {x:780, y:580, w:180, h:60, type:'stone'},
+      // Bottom hazards floor
+      {x:180, y:600, w:200, h:40, type:'hazard', hazardType:'fire'},
+      {x:580, y:600, w:200, h:40, type:'hazard', hazardType:'water'},
+      {x:380, y:600, w:200, h:40, type:'hazard', hazardType:'poison'},
+      // Left climbing
+      {x:30, y:470, w:100, h:16, type:'stone'},
+      {x:140, y:380, w:100, h:16, type:'stone'},
+      {x:30, y:290, w:100, h:16, type:'stone'},
+      {x:140, y:200, w:100, h:16, type:'stone'},
+      // Right climbing
+      {x:830, y:470, w:100, h:16, type:'stone'},
+      {x:720, y:380, w:100, h:16, type:'stone'},
+      {x:830, y:290, w:100, h:16, type:'stone'},
+      {x:720, y:200, w:100, h:16, type:'stone'},
+      // Center platforms
+      {x:350, y:480, w:260, h:16, type:'stone'},
+      {x:300, y:380, w:360, h:16, type:'stone'},
+      {x:350, y:280, w:260, h:16, type:'stone'},
+      {x:300, y:180, w:360, h:16, type:'stone'},
+      // Top
+      {x:380, y:100, w:200, h:16, type:'stone'},
+      // Walls
+      {x:0, y:0, w:20, h:640, type:'stone'},
+      {x:940, y:0, w:20, h:640, type:'stone'},
+      {x:0, y:0, w:960, h:20, type:'stone'},
+    ],
+    hazards: [
+      {x:180, y:600, w:200, h:40, type:'fire'},
+      {x:580, y:600, w:200, h:40, type:'water'},
+      {x:380, y:600, w:200, h:40, type:'poison'},
+      {x:420, y:380, w:120, h:16, type:'poison'},
+      {x:420, y:180, w:120, h:16, type:'poison'},
+    ],
+    gems: [
+      {x:60, y:445, w:14, h:14, type:'fire'},
+      {x:860, y:445, w:14, h:14, type:'water'},
+      {x:170, y:355, w:14, h:14, type:'fire'},
+      {x:740, y:355, w:14, h:14, type:'water'},
+      {x:60, y:265, w:14, h:14, type:'fire'},
+      {x:860, y:265, w:14, h:14, type:'water'},
+      {x:170, y:175, w:14, h:14, type:'fire'},
+      {x:740, y:175, w:14, h:14, type:'water'},
+      {x:450, y:75, w:14, h:14, type:'fire'},
+      {x:500, y:75, w:14, h:14, type:'water'},
+    ],
+    exits: [
+      {x:420, y:60, w:30, h:40, type:'fire'},
+      {x:510, y:60, w:30, h:40, type:'water'},
+    ],
+    movingPlatforms: [
+      {x:250, y:530, w:80, h:14, vx:0, vy:1, minY:490, maxY:560, dir:1},
+      {x:630, y:530, w:80, h:14, vx:0, vy:1, minY:490, maxY:560, dir:-1},
+      {x:380, y:340, w:80, h:14, vx:1.5, vy:0, minX:250, maxX:630, dir:1},
+      {x:500, y:240, w:80, h:14, vx:-1.5, vy:0, minX:250, maxX:630, dir:-1},
+    ],
+  },
+];
+
+// ============ GAME OBJECTS ============
+let fireboy, watergirl;
+
+function loadLevel(idx) {
+  const level = levels[idx];
+  platforms = level.platforms.filter(p => p.type === 'stone');
+  hazards = level.hazards;
+  gems = level.gems.map(g => ({...g, collected: false}));
+  exits = level.exits;
+  movingPlatforms = level.movingPlatforms.map(mp => ({...mp, startX: mp.x, startY: mp.y}));
+  fireboy = new Player(level.fireStart[0], level.fireStart[1], 'fire');
+  watergirl = new Player(level.waterStart[0], level.waterStart[1], 'water');
+  particles = [];
+  fireGems = 0; waterGems = 0;
+  totalFireGems = gems.filter(g => g.type === 'fire').length;
+  totalWaterGems = gems.filter(g => g.type === 'water').length;
+  timer = 0;
+}
+
+// ============ RENDERING ============
+function drawBackground() {
+  // Sky gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#0a0a2e');
+  grad.addColorStop(0.5, '#1a1a3e');
+  grad.addColorStop(1, '#0d1117');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars
+  for (let s of bgStars) {
+    const twinkle = 0.5 + 0.5 * Math.sin(Date.now() * 0.003 + s.b * 10);
+    ctx.globalAlpha = twinkle * 0.8;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.s, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Background trees
+  for (let t of bgTrees) {
+    ctx.fillStyle = '#0a1a0a';
+    ctx.fillRect(t.x + t.w/2 - 3, H - t.h, 6, t.h);
+    ctx.fillStyle = '#0d2a0d';
+    ctx.beginPath();
+    ctx.arc(t.x + t.w/2, H - t.h, t.w, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = '#0a200a';
+    ctx.beginPath();
+    ctx.arc(t.x + t.w/2 - 5, H - t.h + 10, t.w*0.8, 0, Math.PI*2);
+    ctx.fill();
+  }
+}
+
+function drawPlatforms() {
+  for (let p of platforms) {
+    // Stone texture
+    const grad = ctx.createLinearGradient(p.x, p.y, p.x, p.y + p.h);
+    grad.addColorStop(0, '#4a4a5a');
+    grad.addColorStop(0.3, '#3a3a4a');
+    grad.addColorStop(1, '#2a2a3a');
+    ctx.fillStyle = grad;
+    ctx.fillRect(p.x, p.y, p.w, p.h);
+
+    // Top edge highlight
+    ctx.fillStyle = '#5a5a6a';
+    ctx.fillRect(p.x, p.y, p.w, 2);
+
+    // Brick pattern
+    ctx.strokeStyle = '#2a2a3a';
+    ctx.lineWidth = 1;
+    const brickH = 12;
+    const brickW = 24;
+    for (let row = 0; row < Math.ceil(p.h/brickH); row++) {
+      const offset = (row % 2) * brickW/2;
+      for (let col = -1; col < Math.ceil(p.w/brickW)+1; col++) {
+        const bx = p.x + col*brickW + offset;
+        const by = p.y + row*brickH;
+        ctx.strokeRect(bx, by, brickW, brickH);
+      }
+    }
+  }
+}
+
+function drawMovingPlatforms() {
+  for (let mp of movingPlatforms) {
+    const grad = ctx.createLinearGradient(mp.x, mp.y, mp.x, mp.y + mp.h);
+    grad.addColorStop(0, '#6a5a4a');
+    grad.addColorStop(1, '#4a3a2a');
+    ctx.fillStyle = grad;
+    ctx.fillRect(mp.x, mp.y, mp.w, mp.h);
+
+    // Arrow indicators
+    ctx.fillStyle = '#8a7a6a';
+    const cx = mp.x + mp.w/2;
+    const cy = mp.y + mp.h/2;
+    if (mp.vx !== 0) {
+      ctx.beginPath();
+      ctx.moveTo(cx-8, cy); ctx.lineTo(cx+8, cy);
+      ctx.moveTo(cx+5, cy-4); ctx.lineTo(cx+8, cy); ctx.lineTo(cx+5, cy+4);
+      ctx.moveTo(cx-5, cy-4); ctx.lineTo(cx-8, cy); ctx.lineTo(cx-5, cy+4);
+      ctx.strokeStyle = '#8a7a6a'; ctx.lineWidth = 2; ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy-6); ctx.lineTo(cx, cy+6);
+      ctx.moveTo(cx-4, cy-3); ctx.lineTo(cx, cy-6); ctx.lineTo(cx+4, cy-3);
+      ctx.moveTo(cx-4, cy+3); ctx.lineTo(cx, cy+6); ctx.lineTo(cx+4, cy+3);
+      ctx.strokeStyle = '#8a7a6a'; ctx.lineWidth = 2; ctx.stroke();
+    }
+  }
+}
+
+function drawHazards() {
+  const time = Date.now() * 0.003;
+  for (let h of hazards) {
+    if (h.type === 'fire') {
+      // Fire pool
+      const grad = ctx.createLinearGradient(h.x, h.y, h.x, h.y + h.h);
+      grad.addColorStop(0, '#ff6b35');
+      grad.addColorStop(0.5, '#e63946');
+      grad.addColorStop(1, '#9d0208');
+      ctx.fillStyle = grad;
+      ctx.fillRect(h.x, h.y, h.w, h.h);
+
+      // Flames
+      for (let i = 0; i < h.w/8; i++) {
+        const fx = h.x + i*8 + 4;
+        const fh = 8 + Math.sin(time + i*0.8) * 6;
+        ctx.fillStyle = `hsl(${20 + Math.sin(time+i)*10}, 100%, ${55 + Math.sin(time*2+i)*15}%)`;
+        ctx.beginPath();
+        ctx.moveTo(fx-3, h.y);
+        ctx.quadraticCurveTo(fx, h.y - fh, fx+3, h.y);
+        ctx.fill();
+      }
+    } else if (h.type === 'water') {
+      // Water pool
+      const grad = ctx.createLinearGradient(h.x, h.y, h.x, h.y + h.h);
+      grad.addColorStop(0, '#00b4d8');
+      grad.addColorStop(0.5, '#0077b6');
+      grad.addColorStop(1, '#023e8a');
+      ctx.fillStyle = grad;
+      ctx.fillRect(h.x, h.y, h.w, h.h);
+
+      // Waves
+      ctx.strokeStyle = 'rgba(144,224,239,0.5)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let x = h.x; x < h.x + h.w; x += 2) {
+        const wy = h.y + Math.sin(time*2 + x*0.05) * 2;
+        if (x === h.x) ctx.moveTo(x, wy);
+        else ctx.lineTo(x, wy);
+      }
+      ctx.stroke();
+    } else if (h.type === 'poison') {
+      // Poison pool
+      const grad = ctx.createLinearGradient(h.x, h.y, h.x, h.y + h.h);
+      grad.addColorStop(0, '#80b918');
+      grad.addColorStop(0.5, '#55a630');
+      grad.addColorStop(1, '#2b9348');
+      ctx.fillStyle = grad;
+      ctx.fillRect(h.x, h.y, h.w, h.h);
+
+      // Bubbles
+      for (let i = 0; i < h.w/15; i++) {
+        const bx = h.x + (i*15 + time*20) % h.w;
+        const by = h.y + h.h - Math.abs(Math.sin(time + i)) * h.h * 0.6;
+        ctx.fillStyle = 'rgba(163,230,53,0.5)';
+        ctx.beginPath();
+        ctx.arc(bx, by, 2 + Math.sin(time*2+i)*1, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
+  }
+}
+
+function drawGems() {
+  const time = Date.now() * 0.003;
+  for (let g of gems) {
+    if (g.collected) continue;
+    const cx = g.x + g.w/2;
+    const cy = g.y + g.h/2 + Math.sin(time + g.x) * 3;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    // Glow
+    if (g.type === 'fire') {
+      ctx.shadowColor = '#ff6b35';
+      ctx.shadowBlur = 12;
+      ctx.fillStyle = '#ffba08';
+    } else {
+      ctx.shadowColor = '#00b4d8';
+      ctx.shadowBlur = 12;
+      ctx.fillStyle = '#90e0ef';
+    }
+
+    // Diamond shape
+    ctx.beginPath();
+    ctx.moveTo(0, -8);
+    ctx.lineTo(7, 0);
+    ctx.lineTo(0, 8);
+    ctx.lineTo(-7, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    // Inner shine
+    ctx.fillStyle = g.type === 'fire' ? '#fff3b0' : '#caf0f8';
+    ctx.beginPath();
+    ctx.moveTo(0, -4);
+    ctx.lineTo(3, 0);
+    ctx.lineTo(0, 4);
+    ctx.lineTo(-3, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+  }
+}
+
+function drawExits() {
+  const time = Date.now() * 0.003;
+  for (let e of exits) {
+    ctx.save();
+    const cx = e.x + e.w/2;
+    const cy = e.y + e.h/2;
+
+    // Door frame
+    ctx.fillStyle = e.type === 'fire' ? '#8b4513' : '#2a6f97';
+    ctx.fillRect(e.x - 3, e.y - 5, e.w + 6, e.h + 5);
+
+    // Door
+    const doorGrad = ctx.createLinearGradient(e.x, e.y, e.x, e.y + e.h);
+    if (e.type === 'fire') {
+      doorGrad.addColorStop(0, '#ff6b35');
+      doorGrad.addColorStop(1, '#e63946');
+    } else {
+      doorGrad.addColorStop(0, '#00b4d8');
+      doorGrad.addColorStop(1, '#0077b6');
+    }
+    ctx.fillStyle = doorGrad;
+    ctx.fillRect(e.x, e.y, e.w, e.h);
+
+    // Glow effect
+    const glowAlpha = 0.3 + 0.2 * Math.sin(time * 2);
+    ctx.fillStyle = e.type === 'fire' ? `rgba(255,107,53,${glowAlpha})` : `rgba(0,180,216,${glowAlpha})`;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 30, 0, Math.PI*2);
+    ctx.fill();
+
+    // Arrow
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.beginPath();
+    ctx.moveTo(cx, e.y - 15 + Math.sin(time*3)*3);
+    ctx.lineTo(cx - 6, e.y - 8 + Math.sin(time*3)*3);
+    ctx.lineTo(cx + 6, e.y - 8 + Math.sin(time*3)*3);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+  }
+}
+
+function drawHUD() {
+  // Level name
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(W/2 - 100, 25, 200, 30);
+  ctx.fillStyle = '#fff';
+  ctx.font = '16px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`第 ${currentLevel+1} 关 - ${levels[currentLevel].name}`, W/2, 46);
+
+  // Fire gems
+  ctx.textAlign = 'left';
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(15, 25, 130, 30);
+  ctx.fillStyle = '#ff6b35';
+  ctx.font = 'bold 16px sans-serif';
+  ctx.fillText(`🔥 ${fireGems}/${totalFireGems}`, 25, 46);
+
+  // Water gems
+  ctx.textAlign = 'right';
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(W - 145, 25, 130, 30);
+  ctx.fillStyle = '#00b4d8';
+  ctx.fillText(`💧 ${waterGems}/${totalWaterGems}`, W - 25, 46);
+
+  // Timer
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(W/2 - 40, 58, 80, 22);
+  ctx.fillStyle = '#aaa';
+  ctx.font = '13px sans-serif';
+  const mins = Math.floor(timer/60000);
+  const secs = Math.floor((timer%60000)/1000);
+  ctx.fillText(`${mins}:${secs.toString().padStart(2,'0')}`, W/2, 74);
+
+  // Exit indicators
+  const fireAtExit = fireboy && fireboy.atExit;
+  const waterAtExit = watergirl && watergirl.atExit;
+
+  ctx.textAlign = 'center';
+  ctx.font = '14px sans-serif';
+  if (fireAtExit && waterAtExit) {
+    ctx.fillStyle = '#4ecdc4';
+    ctx.fillText('✨ 两人都已到达出口！关卡即将完成... ✨', W/2, H - 15);
+  } else if (fireAtExit) {
+    ctx.fillStyle = '#ff6b35';
+    ctx.fillText('🔥 火男孩已到达出口，等待水女孩...', W/2, H - 15);
+  } else if (waterAtExit) {
+    ctx.fillStyle = '#00b4d8';
+    ctx.fillText('💧 水女孩已到达出口，等待火男孩...', W/2, H - 15);
+  }
+}
+
+// ============ GAME LOGIC ============
+let lastTime = 0;
+let levelCompleteTimer = 0;
+
+function updateMovingPlatforms() {
+  for (let mp of movingPlatforms) {
+    if (mp.vx !== 0) {
+      mp.x += mp.vx;
+      if (mp.x <= mp.minX || mp.x + mp.w >= mp.maxX) mp.vx *= -1;
+    }
+    if (mp.vy !== 0) {
+      mp.y += mp.vy;
+      if (mp.y <= mp.minY || mp.y >= mp.maxY) mp.vy *= -1;
+    }
+  }
+}
+
+function gameLoop(timestamp) {
+  const dt = timestamp - lastTime;
+  lastTime = timestamp;
+
+  if (gameState === 'playing') {
+    timer += dt;
+
+    // Update
+    updateMovingPlatforms();
+    fireboy.update(dt);
+    watergirl.update(dt);
+    updateParticles();
+
+    // Check level complete
+    if (fireboy.atExit && watergirl.atExit) {
+      levelCompleteTimer += dt;
+      if (levelCompleteTimer > 500) {
+        showLevelComplete();
+      }
+    } else {
+      levelCompleteTimer = 0;
+    }
+  }
+
+  // Draw
+  drawBackground();
+  drawPlatforms();
+  drawMovingPlatforms();
+  drawHazards();
+  drawGems();
+  drawExits();
+  if (fireboy) fireboy.draw();
+  if (watergirl) watergirl.draw();
+  drawParticles();
+  drawHUD();
+
+  requestAnimationFrame(gameLoop);
+}
+
+// ============ GAME STATE MANAGEMENT ============
+function startGame() {
+  currentLevel = 0;
+  loadLevel(currentLevel);
+  gameState = 'playing';
+  document.getElementById('startScreen').classList.add('hidden');
+  document.getElementById('levelComplete').classList.add('hidden');
+  document.getElementById('gameOver').classList.add('hidden');
+}
+
+function showLevelComplete() {
+  gameState = 'levelComplete';
+  const mins = Math.floor(timer/60000);
+  const secs = Math.floor((timer%60000)/1000);
+  document.getElementById('levelStats').innerHTML =
+    `⏱️ 用时: ${mins}:${secs.toString().padStart(2,'0')}<br>` +
+    `🔥 火宝石: ${fireGems}/${totalFireGems}<br>` +
+    `💧 水宝石: ${waterGems}/${totalWaterGems}`;
+  document.getElementById('levelComplete').classList.remove('hidden');
+}
+
+function showGameOver() {
+  gameState = 'gameOver';
+  document.getElementById('deathStats').innerHTML = '角色已阵亡，请重新尝试！';
+  document.getElementById('gameOver').classList.remove('hidden');
+}
+
+function nextLevel() {
+  currentLevel++;
+  if (currentLevel >= levels.length) {
+    currentLevel = 0; // Loop back
+  }
+  loadLevel(currentLevel);
+  gameState = 'playing';
+  document.getElementById('levelComplete').classList.add('hidden');
+}
+
+function restartLevel() {
+  loadLevel(currentLevel);
+  gameState = 'playing';
+  document.getElementById('gameOver').classList.add('hidden');
+}
+
+// ============ START ============
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
