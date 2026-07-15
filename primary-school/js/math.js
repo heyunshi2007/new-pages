@@ -739,6 +739,20 @@ window.MathApp = (function () {
         }).join('') +
       '</div>' +
 
+      // 应用题入口
+      '<div class="mt-6 px-4 max-w-md mx-auto">' +
+        '<div class="border-t-2 border-dashed border-gray-200 pt-6">' +
+          '<button id="word-problem-btn" class="w-full flex items-center justify-between py-4 px-6 rounded-xl ' +
+            'bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-200 hover:border-purple-400 hover:shadow-md active:bg-purple-100 transition-all text-left">' +
+            '<div>' +
+              '<div class="text-lg font-bold text-purple-700">📝 应用题练习</div>' +
+              '<div class="text-sm text-gray-400 mt-1">含讲解 · 语音朗读 · 错题自动收集</div>' +
+            '</div>' +
+            '<svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>' +
+          '</button>' +
+        '</div>' +
+      '</div>' +
+
       // 返回按钮
       '<div class="mt-8 text-center">' +
         '<button id="back-home" class="py-2 px-6 rounded-xl text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors text-base">' +
@@ -754,6 +768,14 @@ window.MathApp = (function () {
         renderPractice(grade, levelIndex, container);
       });
     });
+
+    // 绑定应用题按钮
+    var wordProblemBtn = document.getElementById('word-problem-btn');
+    if (wordProblemBtn) {
+      wordProblemBtn.addEventListener('click', function () {
+        renderWordProblems(grade, container);
+      });
+    }
 
     // 绑定计时模式切换
     var timerToggle = document.getElementById('timer-toggle');
@@ -772,7 +794,224 @@ window.MathApp = (function () {
     });
   }
 
-  // ==================== 暴露公共接口 ====================
+  // ==================== 7. 应用题练习 ====================
+
+  /**
+   * 渲染应用题练习界面
+   * @param {number} grade - 年级
+   * @param {HTMLElement} container - 容器
+   */
+  function renderWordProblems(grade, container) {
+    var problems = window.MATH_WORD_PROBLEMS && window.MATH_WORD_PROBLEMS[grade];
+    if (!problems || problems.length === 0) {
+      container.innerHTML = '<p class="text-center text-gray-500 py-20">暂无应用题</p>';
+      return;
+    }
+
+    // 打乱顺序并取全部题目
+    var shuffled = problems.slice().sort(function() { return Math.random() - 0.5; });
+    var currentIndex = 0;
+    var correctCount = 0;
+    var wrongList = [];
+
+    function renderCurrentQuestion() {
+      var p = shuffled[currentIndex];
+      var isLast = currentIndex === shuffled.length - 1;
+
+      container.innerHTML =
+        '<div class="max-w-2xl mx-auto px-4 py-6">' +
+          // 顶部
+          '<div class="flex items-center justify-between mb-6">' +
+            '<button id="wp-back" class="text-gray-500 hover:text-gray-700 flex items-center gap-1 text-base">' +
+              '← 返回' +
+            '</button>' +
+            '<div class="text-lg font-bold text-gray-600">' +
+              '<span class="text-[#42A5F5]">' + (currentIndex + 1) + '</span>' +
+              '<span class="text-gray-400"> / ' + shuffled.length + '</span>' +
+            '</div>' +
+            '<div class="text-sm text-gray-400">✓ ' + correctCount + '</div>' +
+          '</div>' +
+
+          // 题目卡片
+          '<div class="bg-white rounded-2xl shadow-lg p-6 mb-4 border border-gray-100">' +
+            '<div class="flex items-start gap-3 mb-4">' +
+              '<span class="text-2xl">📝</span>' +
+              '<p class="text-lg text-gray-800 leading-relaxed flex-1">' + p.q + '</p>' +
+            '</div>' +
+            '<div class="bg-blue-50 rounded-xl p-4">' +
+              '<div class="flex items-center gap-3">' +
+                '<span class="text-gray-600 font-medium whitespace-nowrap">你的答案：</span>' +
+                '<input type="number" id="wp-input" class="flex-1 min-w-[100px] text-center text-2xl font-bold border-2 border-blue-200 rounded-xl py-2 focus:border-[#42A5F5] focus:outline-none" placeholder="?" autocomplete="off">' +
+                '<button id="wp-submit" class="btn-large bg-[#42A5F5] text-white hover:bg-[#1E88E5]">' +
+                  '确认' +
+                '</button>' +
+              '</div>' +
+              '<div id="wp-feedback" class="mt-3"></div>' +
+            '</div>' +
+          '</div>' +
+
+          // 朗读按钮
+          '<div class="text-center mb-4">' +
+            '<button id="wp-speak" class="px-5 py-2.5 rounded-xl bg-amber-50 text-amber-600 hover:bg-amber-100 font-medium text-base">' +
+              '🔊 朗读题目' +
+            '</button>' +
+          '</div>' +
+
+          // 下一题按钮（隐藏，答完后显示）
+          '<div id="wp-next-wrap" class="text-center hidden">' +
+            '<button id="wp-next" class="btn-large bg-[#42A5F5] text-white hover:bg-[#1E88E5]">' +
+              (isLast ? '查看成绩 🏆' : '下一题 →') +
+            '</button>' +
+          '</div>' +
+        '</div>';
+
+      // 绑定事件
+      var inputEl = document.getElementById('wp-input');
+      var submitBtn = document.getElementById('wp-submit');
+      var feedbackEl = document.getElementById('wp-feedback');
+      var nextWrap = document.getElementById('wp-next-wrap');
+      var nextBtn = document.getElementById('wp-next');
+
+      inputEl.focus();
+
+      // 回车提交
+      inputEl.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') submitBtn.click();
+      });
+
+      // 朗读题目
+      var speakBtn = document.getElementById('wp-speak');
+      speakBtn.addEventListener('click', function() {
+        if (window.Speech) Speech.speakChinese(p.q, 0.85);
+      });
+
+      // 提交答案
+      submitBtn.addEventListener('click', function() {
+        var userVal = parseFloat(inputEl.value);
+        if (isNaN(userVal)) {
+          inputEl.classList.add('wrong-shake');
+          setTimeout(function() { inputEl.classList.remove('wrong-shake'); }, 400);
+          return;
+        }
+
+        var isCorrect = Math.abs(userVal - p.answer) < 0.01;
+
+        inputEl.disabled = true;
+        submitBtn.disabled = true;
+
+        if (isCorrect) {
+          correctCount++;
+          if (window.Points) {
+            Points.addPoints(3);
+            Points.unlockMedal('first_practice');
+          }
+          feedbackEl.innerHTML =
+            '<div class="bg-green-50 rounded-lg p-3 mt-2">' +
+              '<div class="text-green-600 font-bold text-base">✓ 回答正确！+3分</div>' +
+              '<div class="text-green-700 text-sm mt-2"><strong>📝 讲解：</strong>' + p.explain + '</div>' +
+            '</div>';
+          if (window.Speech) Speech.speakChinese('回答正确', 0.9);
+        } else {
+          wrongList.push({ question: p.q, correctAnswer: p.answer, userAnswer: userVal });
+          if (window.WrongBook) {
+            WrongBook.add({
+              subject: 'math',
+              grade: grade,
+              question: p.q,
+              correctAnswer: p.answer,
+              userAnswer: userVal,
+              timestamp: Date.now()
+            });
+          }
+          feedbackEl.innerHTML =
+            '<div class="bg-red-50 rounded-lg p-3 mt-2">' +
+              '<div class="text-red-600 font-bold text-base">✗ 答错了，正确答案是 ' + p.answer + '</div>' +
+              '<div class="text-red-700 text-sm mt-2"><strong>📝 讲解：</strong>' + p.explain + '</div>' +
+              '<button id="wp-replay" class="mt-2 px-4 py-1.5 rounded-lg bg-amber-100 text-amber-700 text-sm font-medium hover:bg-amber-200">🔊 听讲解</button>' +
+            '</div>';
+          if (window.Speech) Speech.speakChinese('答错了，正确答案是' + p.answer + '。' + p.explain, 0.8);
+
+          // 绑定听讲解按钮
+          var replayBtn = document.getElementById('wp-replay');
+          if (replayBtn) {
+            replayBtn.addEventListener('click', function() {
+              if (window.Speech) Speech.speakChinese(p.explain, 0.85);
+            });
+          }
+        }
+
+        nextWrap.classList.remove('hidden');
+      });
+
+      // 下一题
+      nextBtn.addEventListener('click', function() {
+        currentIndex++;
+        if (currentIndex >= shuffled.length) {
+          renderResult();
+        } else {
+          renderCurrentQuestion();
+        }
+      });
+
+      // 返回
+      document.getElementById('wp-back').addEventListener('click', function() {
+        renderLevelSelect(grade, container);
+      });
+    }
+
+    function renderResult() {
+      var total = shuffled.length;
+      var rate = Math.round(correctCount / total * 100);
+      var points = 0;
+      if (rate === 100) points = 20;
+      else if (rate >= 80) points = 15;
+      else if (rate >= 60) points = 10;
+      else points = 5;
+
+      if (window.Points) {
+        Points.addPoints(points);
+        Points.unlockMedal('first_practice');
+        if (rate === 100) Points.unlockMedal('perfect_math');
+      }
+
+      container.innerHTML =
+        '<div class="max-w-lg mx-auto px-4 py-8 text-center">' +
+          '<div class="text-6xl mb-4">' + (rate === 100 ? '🏆' : rate >= 60 ? '🎉' : '💪') + '</div>' +
+          '<h2 class="text-2xl font-bold text-gray-700 mb-2">应用题练习完成！</h2>' +
+          '<div class="text-5xl font-bold text-[#42A5F5] my-4">' + correctCount + '/' + total + '</div>' +
+          '<div class="text-lg text-gray-500 mb-6">正确率 ' + rate + '% · 获得 ' + points + ' 积分</div>' +
+
+          (wrongList.length > 0 ?
+            '<div class="bg-red-50 rounded-xl p-4 mb-6 text-left">' +
+              '<h3 class="font-bold text-red-600 mb-2">错题回顾（' + wrongList.length + '题）</h3>' +
+              wrongList.map(function(w) {
+                return '<div class="text-sm text-gray-600 mb-2 pb-2 border-b border-red-100">' +
+                  '<div>' + w.question + '</div>' +
+                  '<div class="mt-1">正确：<span class="text-green-600 font-bold">' + w.correctAnswer + '</span> | 你的：<span class="text-red-500 line-through">' + w.userAnswer + '</span></div>' +
+                '</div>';
+              }).join('') +
+            '</div>'
+          : '') +
+
+          '<div class="flex gap-3 justify-center">' +
+            '<button id="wp-again" class="btn-large bg-[#42A5F5] text-white hover:bg-[#1E88E5]">再来一轮</button>' +
+            '<button id="wp-home" class="btn-large bg-gray-100 text-gray-600 hover:bg-gray-200">返回</button>' +
+          '</div>' +
+        '</div>';
+
+      document.getElementById('wp-again').addEventListener('click', function() {
+        currentIndex = 0;
+        correctCount = 0;
+        wrongList = [];
+        renderCurrentQuestion();
+      });
+      document.getElementById('wp-home').addEventListener('click', function() {
+        renderLevelSelect(grade, container);
+      });
+    }
+
+    renderCurrentQuestion();
+  }
 
   return {
     /** 出题函数 */
@@ -787,5 +1026,7 @@ window.MathApp = (function () {
     renderPractice: renderPractice,
     /** 渲染难度选择界面 */
     renderLevelSelect: renderLevelSelect,
+    /** 渲染应用题练习界面 */
+    renderWordProblems: renderWordProblems,
   };
 })();
