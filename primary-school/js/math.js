@@ -692,72 +692,87 @@ window.MathApp = (function () {
 
     // 渲染界面
     container.innerHTML =
-      // 页头
-      '<div class="text-center mb-8">' +
-        '<h2 class="text-2xl font-bold text-gray-700 mb-2">' + config.label + ' · 数学口算</h2>' +
-        '<p class="text-gray-500">选择练习难度</p>' +
+      // 模式切换 Tab
+      '<div class="text-center mb-6">' +
+        '<h2 class="text-2xl font-bold text-gray-700 mb-3">' + config.label + ' · 数学</h2>' +
+        '<div class="inline-flex bg-gray-100 rounded-xl p-1 gap-1">' +
+          '<button id="tab-calc" class="px-5 py-2 rounded-lg text-sm font-bold transition-all bg-white text-[#42A5F5] shadow-sm" data-mode="calc">🔢 口算练习</button>' +
+          '<button id="tab-word" class="px-5 py-2 rounded-lg text-sm font-bold transition-all text-gray-500" data-mode="word">📝 应用题</button>' +
+        '</div>' +
       '</div>' +
 
-      // 计时模式切换
-      '<div class="flex items-center justify-center gap-3 mb-8 px-4">' +
-        '<span class="text-gray-600 font-medium">计时模式</span>' +
-        '<label class="relative inline-flex items-center cursor-pointer">' +
-          '<input type="checkbox" id="timer-toggle" class="sr-only peer" ' + (isTimerMode ? 'checked' : '') + '>' +
-          '<div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-200 rounded-full ' +
-            'peer peer-checked:after:translate-x-7 peer-checked:after:border-white ' +
-            'after:absolute after:top-0.5 after:left-[4px] ' +
-            'after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 ' +
-            'after:transition-all peer-checked:bg-[#42A5F5] shadow-inner"></div>' +
-        '</label>' +
-        '<span class="text-sm text-gray-400">' + (isTimerMode ? '已开启' : '已关闭') + '</span>' +
-      '</div>' +
+      // 口算练习面板
+      '<div id="panel-calc">' +
 
-      // 难度等级按钮列表
-      '<div class="space-y-3 px-4 max-w-md mx-auto" id="level-list">' +
-        config.levels.map(function (level, index) {
-          var isProgressive = level.progressive;
-          var btnClass = isProgressive
-            ? 'bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200 hover:border-amber-400 hover:shadow-md active:bg-amber-100'
-            : 'bg-white border-2 border-gray-100 hover:border-[#42A5F5] hover:shadow-md active:bg-blue-50';
-          var titleClass = isProgressive ? 'text-amber-700' : 'text-gray-700';
-          var subText = isProgressive
-            ? '难度递增 · ' + level.count + '题'
-            : level.ops.join('、') + ' · ' + level.count + '题';
-          var iconSvg = isProgressive
-            ? '<svg class="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>'
-            : '<svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>';
-          return (
-            '<button class="level-btn w-full flex items-center justify-between py-4 px-6 rounded-xl ' +
-            btnClass + ' transition-all text-left" data-index="' + index + '">' +
-              '<div>' +
-                '<div class="text-lg font-bold ' + titleClass + '">' + level.name + '</div>' +
-                '<div class="text-sm text-gray-400 mt-1">' + subText + '</div>' +
-              '</div>' +
-              iconSvg +
-            '</button>'
-          );
-        }).join('') +
-      '</div>' +
+        // 计时模式切换
+        '<div class="flex items-center justify-center gap-3 mb-8 px-4">' +
+          '<span class="text-gray-600 font-medium">计时模式</span>' +
+          '<label class="relative inline-flex items-center cursor-pointer">' +
+            '<input type="checkbox" id="timer-toggle" class="sr-only peer" ' + (isTimerMode ? 'checked' : '') + '>' +
+            '<div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-200 rounded-full ' +
+              'peer peer-checked:after:translate-x-7 peer-checked:after:border-white ' +
+              'after:absolute after:top-0.5 after:left-[4px] ' +
+              'after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 ' +
+              'after:transition-all peer-checked:bg-[#42A5F5] shadow-inner"></div>' +
+          '</label>' +
+          '<span class="text-sm text-gray-400">' + (isTimerMode ? '已开启' : '已关闭') + '</span>' +
+        '</div>' +
 
-      // 应用题入口
-      '<div class="mt-6 px-4 max-w-md mx-auto">' +
-        '<div class="border-t-2 border-dashed border-gray-200 pt-6">' +
-          '<button id="word-problem-btn" class="w-full flex items-center justify-between py-4 px-6 rounded-xl ' +
-            'bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-200 hover:border-purple-400 hover:shadow-md active:bg-purple-100 transition-all text-left">' +
-            '<div>' +
-              '<div class="text-lg font-bold text-purple-700">📝 应用题练习</div>' +
-              '<div class="text-sm text-gray-400 mt-1">含讲解 · 语音朗读 · 错题自动收集</div>' +
-            '</div>' +
-            '<svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>' +
+        // 难度等级按钮列表
+        '<div class="space-y-3 px-4 max-w-md mx-auto" id="level-list">' +
+          config.levels.map(function (level, index) {
+            var isProgressive = level.progressive;
+            var btnClass = isProgressive
+              ? 'bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200 hover:border-amber-400 hover:shadow-md active:bg-amber-100'
+              : 'bg-white border-2 border-gray-100 hover:border-[#42A5F5] hover:shadow-md active:bg-blue-50';
+            var titleClass = isProgressive ? 'text-amber-700' : 'text-gray-700';
+            var subText = isProgressive
+              ? '难度递增 · ' + level.count + '题'
+              : level.ops.join('、') + ' · ' + level.count + '题';
+            var iconSvg = isProgressive
+              ? '<svg class="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>'
+              : '<svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>';
+            return (
+              '<button class="level-btn w-full flex items-center justify-between py-4 px-6 rounded-xl ' +
+              btnClass + ' transition-all text-left" data-index="' + index + '">' +
+                '<div>' +
+                  '<div class="text-lg font-bold ' + titleClass + '">' + level.name + '</div>' +
+                  '<div class="text-sm text-gray-400 mt-1">' + subText + '</div>' +
+                '</div>' +
+                iconSvg +
+              '</button>'
+            );
+          }).join('') +
+        '</div>' +
+
+        // 返回按钮
+        '<div class="mt-8 text-center">' +
+          '<button id="back-home" class="py-2 px-6 rounded-xl text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors text-base">' +
+            '← 返回科目选择' +
           '</button>' +
         '</div>' +
       '</div>' +
 
-      // 返回按钮
-      '<div class="mt-8 text-center">' +
-        '<button id="back-home" class="py-2 px-6 rounded-xl text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors text-base">' +
-          '← 返回科目选择' +
-        '</button>' +
+      // panel-word 内容（应用题难度选择）
+      '<div id="panel-word" class="hidden">' +
+        '<div class="space-y-3 px-4 max-w-md mx-auto">' +
+          '<button class="wp-level-btn w-full flex items-center justify-between py-4 px-6 rounded-xl bg-white border-2 border-gray-100 hover:border-[#42A5F5] hover:shadow-md active:bg-blue-50 transition-all text-left" data-diff="basic">' +
+            '<div><div class="text-lg font-bold text-gray-700">基础篇</div><div class="text-sm text-gray-400 mt-1">求和·求剩余·简单比多少 · 5题</div></div>' +
+            '<svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>' +
+          '</button>' +
+          '<button class="wp-level-btn w-full flex items-center justify-between py-4 px-6 rounded-xl bg-white border-2 border-gray-100 hover:border-[#42A5F5] hover:shadow-md active:bg-blue-50 transition-all text-left" data-diff="medium">' +
+            '<div><div class="text-lg font-bold text-gray-700">提升篇</div><div class="text-sm text-gray-400 mt-1">乘除法·两步计算·小数 · 5题</div></div>' +
+            '<svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>' +
+          '</button>' +
+          '<button class="wp-level-btn w-full flex items-center justify-between py-4 px-6 rounded-xl bg-white border-2 border-gray-100 hover:border-[#42A5F5] hover:shadow-md active:bg-blue-50 transition-all text-left" data-diff="hard">' +
+            '<div><div class="text-lg font-bold text-gray-700">拓展篇</div><div class="text-sm text-gray-400 mt-1">多步推理·面积体积·方程 · 5题</div></div>' +
+            '<svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>' +
+          '</button>' +
+          '<button class="wp-level-btn w-full flex items-center justify-between py-4 px-6 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-200 hover:border-purple-400 hover:shadow-md active:bg-purple-100 transition-all text-left" data-diff="all">' +
+            '<div><div class="text-lg font-bold text-purple-700">全部挑战</div><div class="text-sm text-gray-400 mt-1">所有难度 · 含讲解 · 语音朗读 · 10题</div></div>' +
+            '<svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>' +
+          '</button>' +
+        '</div>' +
       '</div>';
 
     // 绑定难度按钮事件
@@ -769,13 +784,33 @@ window.MathApp = (function () {
       });
     });
 
-    // 绑定应用题按钮
-    var wordProblemBtn = document.getElementById('word-problem-btn');
-    if (wordProblemBtn) {
-      wordProblemBtn.addEventListener('click', function () {
-        renderWordProblems(grade, container);
+    // 绑定模式切换 Tab
+    var tabCalc = document.getElementById('tab-calc');
+    var tabWord = document.getElementById('tab-word');
+    var panelCalc = document.getElementById('panel-calc');
+    var panelWord = document.getElementById('panel-word');
+
+    tabCalc.addEventListener('click', function() {
+      tabCalc.className = 'px-5 py-2 rounded-lg text-sm font-bold transition-all bg-white text-[#42A5F5] shadow-sm';
+      tabWord.className = 'px-5 py-2 rounded-lg text-sm font-bold transition-all text-gray-500';
+      panelCalc.classList.remove('hidden');
+      panelWord.classList.add('hidden');
+    });
+    tabWord.addEventListener('click', function() {
+      tabWord.className = 'px-5 py-2 rounded-lg text-sm font-bold transition-all bg-white text-[#42A5F5] shadow-sm';
+      tabCalc.className = 'px-5 py-2 rounded-lg text-sm font-bold transition-all text-gray-500';
+      panelWord.classList.remove('hidden');
+      panelCalc.classList.add('hidden');
+    });
+
+    // 绑定应用题难度按钮
+    var wpLevelBtns = container.querySelectorAll('.wp-level-btn');
+    wpLevelBtns.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var diff = this.getAttribute('data-diff');
+        renderWordProblems(grade, container, diff);
       });
-    }
+    });
 
     // 绑定计时模式切换
     var timerToggle = document.getElementById('timer-toggle');
@@ -800,16 +835,31 @@ window.MathApp = (function () {
    * 渲染应用题练习界面
    * @param {number} grade - 年级
    * @param {HTMLElement} container - 容器
+   * @param {string} difficulty - 难度（basic/medium/hard/all）
    */
-  function renderWordProblems(grade, container) {
-    var problems = window.MATH_WORD_PROBLEMS && window.MATH_WORD_PROBLEMS[grade];
-    if (!problems || problems.length === 0) {
+  function renderWordProblems(grade, container, difficulty) {
+    var allProblems = window.MATH_WORD_PROBLEMS && window.MATH_WORD_PROBLEMS[grade];
+    if (!allProblems || allProblems.length === 0) {
       container.innerHTML = '<p class="text-center text-gray-500 py-20">暂无应用题</p>';
       return;
     }
 
-    // 打乱顺序并取全部题目
-    var shuffled = problems.slice().sort(function() { return Math.random() - 0.5; });
+    // 按难度筛选
+    var filtered;
+    if (difficulty && difficulty !== 'all') {
+      filtered = allProblems.filter(function(p) { return p.difficulty === difficulty; });
+    } else {
+      filtered = allProblems.slice();
+    }
+
+    // 如果筛选后题目不够，补全
+    if (filtered.length < 3) {
+      filtered = allProblems.slice(); // 退化为全部题目
+    }
+
+    // 打乱并截取
+    var count = Math.min(filtered.length, difficulty === 'all' ? 10 : 5);
+    var shuffled = filtered.slice().sort(function() { return Math.random() - 0.5; }).slice(0, count);
     var currentIndex = 0;
     var correctCount = 0;
     var wrongList = [];
@@ -828,6 +878,9 @@ window.MathApp = (function () {
             '<div class="text-lg font-bold text-gray-600">' +
               '<span class="text-[#42A5F5]">' + (currentIndex + 1) + '</span>' +
               '<span class="text-gray-400"> / ' + shuffled.length + '</span>' +
+              '<span class="ml-2 text-xs px-2 py-0.5 rounded-full ' +
+                (p.difficulty === 'hard' ? 'bg-red-100 text-red-600' : p.difficulty === 'medium' ? 'bg-amber-100 text-amber-600' : 'bg-green-100 text-green-600') +
+                '">' + (p.difficulty === 'hard' ? '拓展' : p.difficulty === 'medium' ? '提升' : '基础') + '</span>' +
             '</div>' +
             '<div class="text-sm text-gray-400">✓ ' + correctCount + '</div>' +
           '</div>' +
@@ -906,8 +959,8 @@ window.MathApp = (function () {
             Points.unlockMedal('first_practice');
           }
           feedbackEl.innerHTML =
-            '<div class="bg-green-50 rounded-lg p-3 mt-2">' +
-              '<div class="text-green-600 font-bold text-base">✓ 回答正确！+3分</div>' +
+            '<div class="bg-green-50 rounded-lg p-3 mt-2 correct-pulse">' +
+              '<div class="text-green-600 font-bold text-base flex items-center gap-2">⭐ 回答正确！+3分</div>' +
               '<div class="text-green-700 text-sm mt-2"><strong>📝 讲解：</strong>' + p.explain + '</div>' +
             '</div>';
           if (window.Speech) Speech.speakChinese('回答正确', 0.9);
