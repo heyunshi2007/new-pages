@@ -189,11 +189,12 @@ window.ChineseApp = (function() {
     }
   }
 
-  // 朗读当前听写字的拼音
+  // 朗读当前听写字（读汉字，更清晰）
   function _speakDictation() {
     var current = _dictation.words[_dictation.index];
     if (current && window.Speech) {
-      Speech.speakChinese(current.pinyin, 0.7);
+      // 先读拼音，再读汉字和释义，让孩子更清楚
+      Speech.speakChinese(current.char + '，' + current.meaning, 0.9);
     }
   }
 
@@ -375,8 +376,8 @@ window.ChineseApp = (function() {
     var poem = window.POEMS_DATA && window.POEMS_DATA[index];
     if (poem && window.Speech) {
       // 去掉换行，保留逗号句号让语音更自然
-      var cleanText = poem.text.replace(/\n/g, '\uFF0C');
-      Speech.speakChinese(cleanText, 0.7);
+      var cleanText = poem.text.replace(/\n/g, '。');
+      Speech.speakChinese(poem.title + '，' + poem.author + '。' + cleanText, 0.85);
     }
   }
 
@@ -727,10 +728,29 @@ window.ChineseApp = (function() {
       '</div>';
   }
 
-  // 朗读拼音
+  // 拼音对应汉字映射（让朗读更清晰）
+  var pinyinMap = {
+    'a':'啊','o':'喔','e':'鹅','i':'衣','u':'乌','ü':'鱼',
+    'ai':'爱','ei':'诶','ui':'喂','ao':'奥','ou':'欧','iu':'优',
+    'ie':'耶','üe':'约','er':'耳',
+    'an':'安','en':'恩','in':'因','un':'温','ün':'晕',
+    'ang':'昂','eng':'鞥','ing':'鹰','ong':'翁',
+    'zhi':'知','chi':'吃','shi':'诗','ri':'日','zi':'字','ci':'次','si':'丝',
+    'yi':'衣','wu':'乌','yu':'鱼','ye':'爷','yue':'月','yuan':'圆',
+    'yin':'因','yun':'云','ying':'鹰',
+    'b':'玻','p':'坡','m':'摸','f':'佛',
+    'd':'得','t':'特','n':'讷','l':'勒',
+    'g':'哥','k':'科','h':'喝',
+    'j':'基','q':'欺','x':'希',
+    'zh':'织','ch':'吃','sh':'狮','r':'日',
+    'z':'资','c':'次','s':'思','y':'医','w':'蛙'
+  };
+
+  // 朗读拼音（用对应汉字来读，更清晰）
   function _speakPinyin(pinyin) {
     if (window.Speech) {
-      Speech.speakChinese(pinyin, 0.7);
+      var ch = pinyinMap[pinyin] || pinyin;
+      Speech.speakChinese(ch + '的读音是' + pinyin, 0.9);
     }
   }
 
