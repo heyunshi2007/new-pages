@@ -59,7 +59,8 @@ window.Speech = (function() {
     var utter = new SpeechSynthesisUtterance(text);
     utter.lang = 'zh-CN';
     utter.rate = rate;
-    utter.pitch = 1;
+    utter.pitch = 1.2;      // 音调稍高，更清晰
+    utter.volume = 1.0;     // 最大音量
     var voices = loadVoices();
     var zhVoice = voices.find(function(v) { return v.lang && v.lang.indexOf('zh') === 0; });
     if (zhVoice) utter.voice = zhVoice;
@@ -75,7 +76,8 @@ window.Speech = (function() {
     var utter = new SpeechSynthesisUtterance(text);
     utter.lang = 'en-US';
     utter.rate = rate;
-    utter.pitch = 1;
+    utter.pitch = 1.2;      // 音调稍高，更清晰
+    utter.volume = 1.0;     // 最大音量
     var voices = loadVoices();
     var enVoice = voices.find(function(v) { return v.lang && v.lang.indexOf('en') === 0; });
     if (enVoice) utter.voice = enVoice;
