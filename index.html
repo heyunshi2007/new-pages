@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的学习空间</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .container {
+      max-width: 600px;
+      width: 100%;
+    }
+    h1 {
+      text-align: center;
+      color: #fff;
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .subtitle {
+      text-align: center;
+      color: rgba(255,255,255,0.8);
+      font-size: 0.95rem;
+      margin-bottom: 2rem;
+    }
+    .card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .card {
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+      padding: 1.5rem;
+      background: #fff;
+      border-radius: 20px;
+      text-decoration: none;
+      color: #333;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+    }
+    .card-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      flex-shrink: 0;
+    }
+    .card-icon.orange { background: linear-gradient(135deg, #FF7043, #FFB300); }
+    .card-icon.blue { background: linear-gradient(135deg, #42A5F5, #1E88E5); }
+    .card-icon.green { background: linear-gradient(135deg, #66BB6A, #43A047); }
+    .card-icon.purple { background: linear-gradient(135deg, #AB47BC, #7B1FA2); }
+    .card-info h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+    .card-info p {
+      font-size: 0.85rem;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>我的学习空间</h1>
+    <p class="subtitle">选择一个项目开始吧</p>
+    <div class="card-list">
+      <a class="card" href="primary-school/index.html">
+        <div class="card-icon orange">📚</div>
+        <div class="card-info">
+          <h2>小学学习网站</h2>
+          <p>1-6年级语数英，口算、古诗、单词跟读</p>
+        </div>
+      </a>
+      <a class="card" href="cet4-study-guide/cet4-study-guide.html">
+        <div class="card-icon blue">📝</div>
+        <div class="card-info">
+          <h2>四级备考指南</h2>
+          <p>CET-4 备考资料与学习计划</p>
+        </div>
+      </a>
+      <a class="card" href="game.html">
+        <div class="card-icon green">🎮</div>
+        <div class="card-info">
+          <h2>小游戏</h2>
+          <p>休闲小游戏</p>
+        </div>
+      </a>
+      <a class="card" href="happy">
+        <div class="card-icon purple">🎉</div>
+        <div class="card-info">
+          <h2>Happy</h2>
+          <p>开心每一天</p>
+        </div>
+      </a>
+    </div>
+  </div>
+</body>
+</html>

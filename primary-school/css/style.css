@@ -1,0 +1,258 @@
+/* ==========================================
+   小学1-6年级语数英学习网站 — 自定义样式
+   TailwindCSS 补充样式
+   ========================================== */
+
+/* 全局 */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Microsoft YaHei', 'Hiragino Sans GB', 'Noto Sans CJK SC', sans-serif;
+  background: #FFFDF7;
+  min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 页面过渡 */
+#app {
+  animation: fadeIn 0.3s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 卡片弹跳 */
+@keyframes cardBounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+.card-bounce { animation: cardBounce 0.4s ease; }
+
+/* 正确/错误闪烁 */
+@keyframes correctPulse {
+  0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4); }
+  100% { box-shadow: 0 0 0 20px rgba(76, 175, 80, 0); }
+}
+@keyframes wrongShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+.correct-pulse { animation: correctPulse 0.6s ease; }
+.wrong-shake { animation: wrongShake 0.4s ease; }
+
+/* 大按钮统一样式 */
+.btn-large {
+  min-height: 56px;
+  min-width: 120px;
+  font-size: 1.125rem;
+  font-weight: 700;
+  padding: 0.75rem 1.5rem;
+  border-radius: 16px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+.btn-large:active { transform: scale(0.96); }
+
+/* 年级卡片 */
+.grade-card {
+  transition: all 0.25s;
+  cursor: pointer;
+}
+.grade-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+}
+.grade-card:active {
+  transform: translateY(-2px) scale(0.98);
+}
+
+/* 底部导航 */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-top: 1px solid #E5E7EB;
+  z-index: 50;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 0.5rem 0;
+  color: #9CA3AF;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s;
+  text-decoration: none;
+}
+.bottom-nav-item.active { color: #FF7043; }
+.bottom-nav-item .nav-icon { font-size: 1.5rem; }
+
+/* 输入框去除spinner */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] { -moz-appearance: textfield; }
+
+/* 计时器圆环 */
+.timer-ring {
+  transform: rotate(-90deg);
+}
+.timer-ring circle {
+  transition: stroke-dashoffset 1s linear;
+}
+
+/* 隐藏滚动条 */
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* 积分显示 */
+.points-badge {
+  background: linear-gradient(135deg, #FFB300, #FF8F00);
+  color: #fff;
+  padding: 0.25rem 0.75rem;
+  border-radius: 50px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* 勋章卡片 */
+.medal-card {
+  transition: all 0.2s;
+}
+.medal-card:hover {
+  transform: translateY(-2px);
+}
+.medal-card.locked {
+  filter: grayscale(100%);
+  opacity: 0.5;
+}
+.medal-card.locked:hover {
+  filter: grayscale(80%);
+  opacity: 0.7;
+}
+
+/* 古诗排版 */
+.poem-text {
+  line-height: 2.2;
+  font-size: 1.25rem;
+  letter-spacing: 0.05em;
+}
+.poem-blank {
+  display: inline-block;
+  min-width: 2em;
+  border-bottom: 2px dashed #FF7043;
+  cursor: pointer;
+  color: transparent;
+  text-align: center;
+  padding: 0 0.25em;
+  transition: all 0.2s;
+}
+.poem-blank:hover { border-color: #E64A19; background: #FFF3E0; }
+.poem-blank.filled { color: #2D3436; border-color: #4CAF50; background: #E8F5E9; cursor: default; }
+.poem-blank.wrong { color: #EF5350; border-color: #EF5350; background: #FFEBEE; }
+
+/* 拼音卡片 */
+.pinyin-card {
+  min-width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 2px solid #FFCCBC;
+  border-radius: 12px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.pinyin-card:hover {
+  border-color: #FF7043;
+  background: #FFF3E0;
+  transform: scale(1.08);
+}
+.pinyin-card:active {
+  transform: scale(0.95);
+}
+
+/* 进度条 */
+.progress-bar {
+  height: 8px;
+  background: #E5E7EB;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+/* Toast 通知 */
+.toast {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  padding: 0.75rem 1.5rem;
+  border-radius: 16px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  animation: toastIn 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+.toast-success { background: linear-gradient(135deg, #4CAF50, #66BB6A); }
+.toast-error { background: linear-gradient(135deg, #EF5350, #E57373); }
+.toast-info { background: linear-gradient(135deg, #FFB300, #FF8F00); }
+
+/* 响应式底部间距（为底部导航留空间） */
+.page-with-nav {
+  padding-bottom: 5rem;
+}
+
+/* 单词卡片 */
+.word-card {
+  transition: all 0.2s;
+}
+.word-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
+
+/* 设置页 */
+.setting-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 0;
+  border-bottom: 1px solid #F3F4F6;
+}
+.setting-item:last-child { border-bottom: none; }
